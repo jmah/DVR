@@ -13,7 +13,7 @@ public class Session: NSURLSession {
 
     // MARK: - Initializers
 
-    public init(outputDirectory: String = "~/Desktop/DVR/", cassetteName: String, testBundle: NSBundle = NSBundle.allBundles().filter() { $0.bundlePath.hasSuffix(".xctest") }.first!, backingSession: NSURLSession = NSURLSession.sharedSession()) {
+    public init(outputDirectory: String = "~/Desktop/DVR/", cassetteName: String, testBundle: NSBundle = (NSBundle.allBundles() as! [NSBundle]).filter() { $0.bundlePath.hasSuffix(".xctest") }.first!, backingSession: NSURLSession = NSURLSession.sharedSession()) {
         self.outputDirectory = outputDirectory
         self.cassetteName = cassetteName
         self.testBundle = testBundle
@@ -28,7 +28,7 @@ public class Session: NSURLSession {
         return SessionDataTask(session: self, request: request)
     }
 
-    public override func dataTaskWithRequest(request: NSURLRequest, completionHandler: (NSData?, NSURLResponse?, NSError?) -> Void) -> NSURLSessionDataTask {
+    public override func dataTaskWithRequest(request: NSURLRequest, completionHandler: ((NSData?, NSURLResponse?, NSError?) -> Void)?) -> NSURLSessionDataTask {
         return SessionDataTask(session: self, request: request, completion: completionHandler)
     }
 
@@ -36,7 +36,7 @@ public class Session: NSURLSession {
         return SessionDownloadTask(session: self, request: request)
     }
 
-    public override func downloadTaskWithRequest(request: NSURLRequest, completionHandler: (NSURL?, NSURLResponse?, NSError?) -> Void) -> NSURLSessionDownloadTask {
+    public override func downloadTaskWithRequest(request: NSURLRequest, completionHandler: ((NSURL?, NSURLResponse?, NSError?) -> Void)?) -> NSURLSessionDownloadTask {
         return SessionDownloadTask(session: self, request: request, completion: completionHandler)
     }
     
@@ -47,12 +47,11 @@ public class Session: NSURLSession {
     // MARK: - Internal
 
     var cassette: Cassette? {
-        guard let path = testBundle.pathForResource(cassetteName, ofType: "json"), data = NSData(contentsOfFile: path) else { return nil }
-        do {
-            if let json = try NSJSONSerialization.JSONObjectWithData(data, options: []) as? [String: AnyObject] {
+        if let path = testBundle.pathForResource(cassetteName, ofType: "json"), data = NSData(contentsOfFile: path) {
+            if let json = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) as? [String: AnyObject] {
                 return Cassette(dictionary: json)
             }
-        } catch {}
-        return nil
+            return nil
+        } else { return nil }
     }
 }

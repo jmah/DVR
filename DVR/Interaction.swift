@@ -27,46 +27,39 @@ struct Interaction {
             // Text
             if contentType.hasPrefix("text/") {
                 // TODO: Use encoding if specified in headers
-                return String(NSString(data: body, encoding: NSUTF8StringEncoding))
+                return String(NSString(data: body, encoding: NSUTF8StringEncoding)!)
             }
 
             // JSON
             if contentType == "application/json" {
-                do {
-                    return try NSJSONSerialization.JSONObjectWithData(body, options: [])
-                } catch {
-                    return nil
-                }
+                return NSJSONSerialization.JSONObjectWithData(body, options: nil, error: nil)
             }
         }
 
         // Base64
-        return body.base64EncodedStringWithOptions([])
+        return body.base64EncodedStringWithOptions(nil)
     }
 
     static func dencodeBody(body: AnyObject?, headers: [String: String]? = nil) -> NSData? {
-        guard let body = body else { return nil }
+        if let body: AnyObject = body {
 
-        if let contentType = headers?["Content-Type"] {
-            // Text
-            if let string = body as? String where contentType.hasPrefix("text/") {
-                // TODO: Use encoding if specified in headers
-                return string.dataUsingEncoding(NSUTF8StringEncoding)
-            }
+            if let contentType = headers?["Content-Type"] {
+                // Text
+                if let string = body as? String where contentType.hasPrefix("text/") {
+                    // TODO: Use encoding if specified in headers
+                    return string.dataUsingEncoding(NSUTF8StringEncoding)
+                }
 
-            // JSON
-            if contentType == "application/json" {
-                do {
-                    return try NSJSONSerialization.dataWithJSONObject(body, options: [])
-                } catch {
-                    return nil
+                // JSON
+                if contentType == "application/json" {
+                    return NSJSONSerialization.dataWithJSONObject(body, options: nil, error: nil)
                 }
             }
-        }
 
-        // Base64
-        if let base64 = body as? String {
-            return NSData(base64EncodedString: base64, options: [])
+            // Base64
+            if let base64 = body as? String {
+                return NSData(base64EncodedString: base64, options: nil)
+            }
         }
 
         return nil
@@ -82,7 +75,7 @@ extension Interaction {
         ]
 
         var response = self.response.dictionary
-        if let data = responseData, body = Interaction.encodeBody(data, headers: response["headers"] as? [String: String]) {
+        if let data = responseData, body: AnyObject = Interaction.encodeBody(data, headers: response["headers"] as? [String: String]) {
             response["body"] = body
         }
         dictionary["response"] = response
@@ -91,13 +84,16 @@ extension Interaction {
     }
 
     init?(dictionary: [String: AnyObject]) {
-        guard let request = dictionary["request"] as? [String: AnyObject],
+        if let request = dictionary["request"] as? [String: AnyObject],
             response = dictionary["response"] as? [String: AnyObject],
-            recordedAt = dictionary["recorded_at"] as? Int else { return nil }
+            recordedAt = dictionary["recorded_at"] as? Int {
 
-        self.request = NSMutableURLRequest(dictionary: request)
-        self.response = URLHTTPResponse(dictionary: response)
-        self.recordedAt = NSDate(timeIntervalSince1970: NSTimeInterval(recordedAt))
-        self.responseData = Interaction.dencodeBody(response["body"], headers: response["headers"] as? [String: String])
+                self.request = NSMutableURLRequest(dictionary: request)
+                self.response = URLHTTPResponse(dictionary: response)
+                self.recordedAt = NSDate(timeIntervalSince1970: NSTimeInterval(recordedAt))
+                self.responseData = Interaction.dencodeBody(response["body"], headers: response["headers"] as? [String: String])
+        } else {
+            return nil
+        }
     }
 }

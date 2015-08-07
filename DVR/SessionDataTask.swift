@@ -1,5 +1,6 @@
 import Foundation
 
+public
 class SessionDataTask: NSURLSessionDataTask {
 
     // MARK: - Types
@@ -25,11 +26,11 @@ class SessionDataTask: NSURLSessionDataTask {
 
     // MARK: - NSURLSessionTask
     
-    override func cancel() {
+    override public func cancel() {
         // Don't do anything
     }
 
-    override func resume() {
+    override public func resume() {
         let cassette = session.cassette
 
         // Find interaction
@@ -52,44 +53,40 @@ class SessionDataTask: NSURLSessionDataTask {
         let outputDirectory = (session.outputDirectory as NSString).stringByExpandingTildeInPath
         let fileManager = NSFileManager.defaultManager()
         if !fileManager.fileExistsAtPath(outputDirectory) {
-            try! fileManager.createDirectoryAtPath(outputDirectory, withIntermediateDirectories: true, attributes: nil)
+            fileManager.createDirectoryAtPath(outputDirectory, withIntermediateDirectories: true, attributes: nil, error: nil)
         }
 
         print("[DVR] Recording '\(session.cassetteName)'")
 
         let task = session.backingSession.dataTaskWithRequest(request) { data, response, error in
-            
-            //Ensure we have a response
-            guard let response = response else {
-                fatalError("[DVR] Failed to persist cassette, because the task returned a nil response.")
-            }
-            
-            // Create cassette
-            let interaction = Interaction(request: self.request, response: response, responseData: data)
-            let cassette = Cassette(name: self.session.cassetteName, interactions: [interaction])
 
-            // Persist
-            do {
+            //Ensure we have a response
+            if let response = response {
+
+                // Create cassette
+                let interaction = Interaction(request: self.request, response: response, responseData: data)
+                let cassette = Cassette(name: self.session.cassetteName, interactions: [interaction])
+
+                // Persist
                 let outputPath = ((outputDirectory as NSString).stringByAppendingPathComponent(self.session.cassetteName) as NSString).stringByAppendingPathExtension("json")!
-                let data = try NSJSONSerialization.dataWithJSONObject(cassette.dictionary, options: [.PrettyPrinted])
+                let data = NSJSONSerialization.dataWithJSONObject(cassette.dictionary, options: .PrettyPrinted, error: nil)!
 
                 // Add trailing new line
-                guard var string = NSString(data: data, encoding: NSUTF8StringEncoding) else {
+                if var string = NSString(data: data, encoding: NSUTF8StringEncoding) {
+                    string = string.stringByAppendingString("\n")
+
+                    if let data = string.dataUsingEncoding(NSUTF8StringEncoding) {
+                        data.writeToFile(outputPath, atomically: true)
+                        fatalError("[DVR] Persisted cassette at \(outputPath). Please add this file to your test target")
+                    }
+
+                    fatalError("[DVR] Failed to persist cassette.")
+                } else {
                     fatalError("[DVR] Failed to persist cassette.")
                 }
-                string = string.stringByAppendingString("\n")
-
-                if let data = string.dataUsingEncoding(NSUTF8StringEncoding) {
-                    data.writeToFile(outputPath, atomically: true)
-                    fatalError("[DVR] Persisted cassette at \(outputPath). Please add this file to your test target")
-                }
-
-                fatalError("[DVR] Failed to persist cassette.")
-            } catch {
-                // Do nothing
+            } else {
+                fatalError("[DVR] Failed to persist cassette, because the task returned a nil response.")
             }
-
-			fatalError("[DVR] Failed to persist cassette.")
         }
         task.resume()
     }

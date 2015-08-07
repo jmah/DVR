@@ -1,5 +1,5 @@
 import XCTest
-@testable import DVR
+/*@testable*/ import DVR
 
 class SessionTests: XCTestCase {
     let session = Session(cassetteName: "example")
@@ -40,10 +40,9 @@ class SessionTests: XCTestCase {
         
         let task = session.downloadTaskWithRequest(request) { location, response, error in
             let data = NSData(contentsOfURL: location!)!
-            do {
-                let JSON = try NSJSONSerialization.JSONObjectWithData(data, options: []) as! [String: AnyObject]
+            if let JSON = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) as? [String: AnyObject] {
                 XCTAssertEqual("TLS 1.2", JSON["tls_version"]! as! String)
-            } catch {
+            } else {
                 XCTFail("Failed to read JSON.")
             }
 

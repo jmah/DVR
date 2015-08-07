@@ -16,7 +16,7 @@ extension NSURLRequest {
             dictionary["headers"] = headers
         }
 
-        if let data = HTTPBody, body = Interaction.encodeBody(data, headers: allHTTPHeaderFields) {
+        if let data = HTTPBody, body: AnyObject = Interaction.encodeBody(data, headers: allHTTPHeaderFields as? [String: String]) {
             dictionary["body"] = body
         }
 
@@ -41,6 +41,6 @@ extension NSMutableURLRequest {
             allHTTPHeaderFields = headers
         }
 
-        HTTPBody = Interaction.dencodeBody(dictionary["body"], headers: allHTTPHeaderFields)
+        HTTPBody = Interaction.dencodeBody(dictionary["body"], headers: allHTTPHeaderFields as? [String: String])
     }
 }

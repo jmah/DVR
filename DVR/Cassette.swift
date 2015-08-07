@@ -32,14 +32,17 @@ extension Cassette {
     }
 
     init?(dictionary: [String: AnyObject]) {
-        guard let name = dictionary["name"] as? String else { return nil }
+        if let name = dictionary["name"] as? String {
 
-        self.name = name
+            self.name = name
 
-        if let array = dictionary["interactions"] as? [[String: AnyObject]] {
-            interactions = array.flatMap { Interaction(dictionary: $0) }
+            if let array = dictionary["interactions"] as? [[String: AnyObject]] {
+                interactions = array.map { Interaction(dictionary: $0) }.filter { $0 != nil }.map { $0! }
+            } else {
+                interactions = []
+            }
         } else {
-            interactions = []
+            return nil
         }
     }
 }
